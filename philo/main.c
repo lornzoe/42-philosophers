@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2025/12/29 18:21:47 by lyanga           ###   ########.fr       */
+/*   Updated: 2025/12/29 18:22:54 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -187,7 +187,7 @@ void *philosophise(void *args)
 		if (philo->time_to_sleep < philo->time_to_eat)
 			usleep((philo->time_to_eat - philo->time_to_sleep) * 1000);
 		// mandatory sleep time
-		usleep(1000);
+		usleep(100);
 	}
 	return NULL;
 }

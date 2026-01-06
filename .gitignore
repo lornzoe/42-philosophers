@@ -1,2 +1,4 @@
 philo/42-philo*
 philo/philo
+.vscode/
+*/*.out

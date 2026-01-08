@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/08 16:43:08 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/09 00:53:30 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,12 +62,11 @@ struct sim_info
 	pthread_mutex_t *forks;
 	pthread_mutex_t death_check;
 };
+
 static uint64_t get_time(uint64_t start)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-	uint64_t time = (uint64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000);
-	// printf("[timestamp: %lu]\n", time);
     return ((uint64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000) - start);
 }
 
@@ -138,21 +137,21 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 // bufferUS is a constant buffer time in microseconds that is meant to give the program leeway time to act
 #define BUFFERUS 1
 
-void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage, uint64_t ttd)
+void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage)
 {
-    // if time to sleep is shorter than time to eat, minimum time to usleep should be the diff + BUFFERUS
     if (sleepeatdiff > 0)
-        usleep(sleepeatdiff * 1000);
-    // if ((timeleft / 100 * percentage < ttd)) // if sleeping by percentage means that 
-	// {
-	// 	printf("asleepfor %lu \n", ttd * 1000 - BUFFERUS);
-	// 	usleep(ttd * 1000 - BUFFERUS);
-	// }
-    // else
 	{
-		// printf("bsleepfor %lu \n", timeleft * 10 * percentage - BUFFERUS);
-        usleep(timeleft * 10 * percentage - BUFFERUS);
+		usleep((uint64_t)sleepeatdiff * 1000);
+		timeleft -= (uint64_t)sleepeatdiff;
 	}
+    usleep(timeleft * 10 * percentage - BUFFERUS);
+}
+
+void hold_for_death(struct philosopher *philo)
+{
+	// i check for death.
+	pthread_mutex_lock(philo->death_check);
+	pthread_mutex_unlock(philo->death_check);
 }
 
 void *philosophise(void *args)
@@ -166,16 +165,20 @@ void *philosophise(void *args)
 		if (philo->id % 2)
 		{
 			pthread_mutex_lock(philo->fork_left);
+			hold_for_death(philo);
 			printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 			pthread_mutex_lock(philo->fork_right);
 		}
 		else
 		{
 			pthread_mutex_lock(philo->fork_right);
+			hold_for_death(philo);
 			printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 			pthread_mutex_lock(philo->fork_left);
 		}
-		// i eat.
+		hold_for_death(philo);
+		printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
+		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
 		philo->state = EAT;
 		// extend deadline
 		if (philo->deadline < get_time(philo->start))
@@ -185,26 +188,22 @@ void *philosophise(void *args)
 		}
 		else
 			philo->deadline = get_time(philo->start) + philo->time_to_die;
-		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
 		usleep(philo->time_to_eat * 1000);
 		philo->times_eaten += 1;
 		pthread_mutex_unlock(philo->fork_left);
 		pthread_mutex_unlock(philo->fork_right);
 
 		// i sleep.
+		hold_for_death(philo);
 		printf("%lu %d is sleeping\n", get_time(philo->start), philo->id);
 		philo->state = SLEEP;
 		usleep(philo->time_to_sleep * 1000);
-
-		// i check for death.
-		pthread_mutex_lock(philo->death_check);
-		pthread_mutex_unlock(philo->death_check);
 	
 		// i think.
+		hold_for_death(philo);
 		printf("%lu %d is thinking\n", get_time(philo->start), philo->id);
 		philo->state = THINK;
-		sleep_for(philo->time_to_eat - philo->time_to_sleep, philo->deadline - get_time(philo->start), 10, philo->time_to_die);
-		// printf("%lu %d woke up\n", get_time(philo->start), philo->id);
+		sleep_for(philo->time_to_eat - philo->time_to_sleep, philo->deadline - get_time(philo->start), 10);
 	}
 	return NULL;
 }
@@ -244,6 +243,7 @@ int main(int argc, char **argv)
 		{
 			if (philosophers[i].state == DEAD || philosophers[i].deadline < get_time(philosophers[i].start))
 			{
+				pthread_mutex_lock(&(info.death_check));
 				printf("%lu %d died\n", get_time(start), philosophers[i].id);
 				death = 1;
 				break;
@@ -269,8 +269,6 @@ int main(int argc, char **argv)
 	}
 	// logic end
 	// cleanup
-	if (death)
-		pthread_mutex_lock(&(info.death_check));
 	free(philosophers);
 	pthread_mutex_destroy(&(info.death_check));
 	// the freeing process needs to be more elaborate here

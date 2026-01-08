@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/06 18:15:01 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/07 09:46:31 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,17 +136,23 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 }
 
 // bufferUS is a constant buffer time in microseconds that is meant to give the program leeway time to act
-#define BUFFERUS 100
+#define BUFFERUS 1
 
 void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage, uint64_t ttd)
 {
     // if time to sleep is shorter than time to eat, minimum time to usleep should be the diff + BUFFERUS
     if (sleepeatdiff > 0)
         usleep(sleepeatdiff * 1000);
-    if ((timeleft / 100 * percentage < ttd))
-        usleep(ttd * 1000 - BUFFERUS);
-    else
+    // if ((timeleft / 100 * percentage < ttd)) // if sleeping by percentage means that 
+	// {
+	// 	printf("asleepfor %lu \n", ttd * 1000 - BUFFERUS);
+	// 	usleep(ttd * 1000 - BUFFERUS);
+	// }
+    // else
+	{
+		// printf("bsleepfor %lu \n", timeleft * 10 * percentage - BUFFERUS);
         usleep(timeleft * 10 * percentage - BUFFERUS);
+	}
 }
 
 void *philosophise(void *args)
@@ -197,7 +203,8 @@ void *philosophise(void *args)
 		// i think.
 		printf("%lu %d is thinking\n", get_time(philo->start), philo->id);
 		philo->state = THINK;
-		sleep_for(philo->time_to_eat - philo->time_to_sleep, get_time(philo->start) - philo->deadline, 10, philo->time_to_die);
+		sleep_for(philo->time_to_eat - philo->time_to_sleep, philo->deadline - get_time(philo->start), 10, philo->time_to_die);
+		// printf("%lu %d woke up\n", get_time(philo->start), philo->id);
 	}
 	return NULL;
 }

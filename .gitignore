@@ -3,3 +3,4 @@ philo/philo
 .vscode/
 */*.out
 *.out
+*/*.o

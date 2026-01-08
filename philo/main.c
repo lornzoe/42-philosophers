@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/07 09:46:31 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/08 16:43:08 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -176,7 +176,6 @@ void *philosophise(void *args)
 			pthread_mutex_lock(philo->fork_left);
 		}
 		// i eat.
-		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
 		philo->state = EAT;
 		// extend deadline
 		if (philo->deadline < get_time(philo->start))
@@ -186,6 +185,7 @@ void *philosophise(void *args)
 		}
 		else
 			philo->deadline = get_time(philo->start) + philo->time_to_die;
+		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
 		usleep(philo->time_to_eat * 1000);
 		philo->times_eaten += 1;
 		pthread_mutex_unlock(philo->fork_left);

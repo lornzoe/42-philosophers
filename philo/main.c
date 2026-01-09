@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/09 21:45:53 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/09 22:31:09 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,6 +89,8 @@ static void init_a_philo(struct philosopher *philo, struct sim_info *info, int i
 	philo->id = i + 1;
 	philo->deadline = info->time_to_die;
 	philo->sim_death = &(info->death);
+	philo->forks[0] = 0;
+	philo->forks[1] = 0;
 }
 
 static int init_setup(struct sim_info *info, struct philosopher **philosophers, int argc, char **argv)
@@ -139,32 +141,15 @@ void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage)
 		if (timeleft > (uint64_t)sleepeatdiff)
 			timeleft -= (uint64_t)sleepeatdiff;
 	}
-    usleep(timeleft * 10 * percentage);
-}
-
-int hold_for_death(struct philosopher *philo)
-{
-	if (*(philo->sim_death) == 1)
-		return 1;
-	return 0;
+	if (timeleft > 0)
+    	usleep(timeleft * 10 * percentage);
 }
 
 uint64_t positive_diff(uint64_t left, uint64_t right)
 {
-	uint64_t max;
-	uint64_t min;
-
 	if (left < right)
-	{
-		max = right;
-		min = left;
-	}
-	else
-	{
-		max = left;
-		min = right;
-	}
-	return (max - min);
+		return (0);
+	return (left - right);
 }
 
 void *philosophise(void *args)
@@ -172,8 +157,17 @@ void *philosophise(void *args)
 	struct philosopher *philo;
 	philo = (struct philosopher *)args;
 	usleep(philo->id % 2 * 50);
-	philo->forks[0] = 0;
-	philo->forks[1] = 0;
+	// absolute death case -- 1 philosopher.
+	if (philo->fork_left == philo->fork_right)
+	{
+		pthread_mutex_lock(philo->fork_left);
+		printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
+		while (!*(philo->sim_death))
+			continue;
+		pthread_mutex_unlock(philo->fork_left);
+		philo->thread_end = 1;
+		return NULL;
+	}
 	while (1)
 	{
 		if (philo->id % 2)

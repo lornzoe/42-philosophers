@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/09 22:31:09 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/10 07:46:00 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -156,7 +156,7 @@ void *philosophise(void *args)
 {
 	struct philosopher *philo;
 	philo = (struct philosopher *)args;
-	usleep(philo->id % 2 * 50);
+
 	// absolute death case -- 1 philosopher.
 	if (philo->fork_left == philo->fork_right)
 	{
@@ -168,8 +168,11 @@ void *philosophise(void *args)
 		philo->thread_end = 1;
 		return NULL;
 	}
+	usleep(philo->id % 2 * 250);
 	while (1)
 	{
+		if (*(philo->sim_death))
+			break;
 		if (philo->id % 2)
 		{
 			pthread_mutex_lock(philo->fork_left);

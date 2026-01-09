@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/09 03:01:43 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/09 21:45:53 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,11 +37,14 @@ struct philosopher
 	int time_to_die;
 	int time_to_eat;
 	int time_to_sleep;
+	int forks[2];
 	pthread_mutex_t *fork_left;
 	pthread_mutex_t *fork_right;
 
-	pthread_mutex_t *death_check;
 	u_int64_t start;
+
+	int *sim_death;
+	int thread_end;
 };
 
 struct sim_info
@@ -52,7 +55,7 @@ struct sim_info
 	int time_to_sleep;
 	int minimum_eats;
 	pthread_mutex_t *forks;
-	pthread_mutex_t death_check;
+	int death;
 };
 
 static uint64_t get_time(uint64_t start)
@@ -83,7 +86,9 @@ static void init_a_philo(struct philosopher *philo, struct sim_info *info, int i
 		philo->fork_right = &(info->forks[0]);
 	else
 	 	philo->fork_right = &(info->forks[i + 1]);
-	philo->death_check = &(info->death_check);
+	philo->id = i + 1;
+	philo->deadline = info->time_to_die;
+	philo->sim_death = &(info->death);
 }
 
 static int init_setup(struct sim_info *info, struct philosopher **philosophers, int argc, char **argv)
@@ -109,7 +114,6 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 		pthread_mutex_init(&(info->forks[i]), NULL);
 		i++;
 	}
-	pthread_mutex_init(&(info->death_check), NULL);
 	i = 0;
 	while (i < info->num)
 	{
@@ -132,15 +136,35 @@ void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage)
     if (sleepeatdiff > 0)
 	{
 		usleep((uint64_t)sleepeatdiff * 1000);
-		timeleft -= (uint64_t)sleepeatdiff;
+		if (timeleft > (uint64_t)sleepeatdiff)
+			timeleft -= (uint64_t)sleepeatdiff;
 	}
     usleep(timeleft * 10 * percentage);
 }
 
-void hold_for_death(struct philosopher *philo)
+int hold_for_death(struct philosopher *philo)
 {
-	pthread_mutex_lock(philo->death_check);
-	pthread_mutex_unlock(philo->death_check);
+	if (*(philo->sim_death) == 1)
+		return 1;
+	return 0;
+}
+
+uint64_t positive_diff(uint64_t left, uint64_t right)
+{
+	uint64_t max;
+	uint64_t min;
+
+	if (left < right)
+	{
+		max = right;
+		min = left;
+	}
+	else
+	{
+		max = left;
+		min = right;
+	}
+	return (max - min);
 }
 
 void *philosophise(void *args)
@@ -148,29 +172,37 @@ void *philosophise(void *args)
 	struct philosopher *philo;
 	philo = (struct philosopher *)args;
 	usleep(philo->id % 2 * 50);
+	philo->forks[0] = 0;
+	philo->forks[1] = 0;
 	while (1)
 	{
 		if (philo->id % 2)
 		{
 			pthread_mutex_lock(philo->fork_left);
-			hold_for_death(philo);
+			philo->forks[0] = 1;
+			if (*(philo->sim_death))
+				break;
 			printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 			pthread_mutex_lock(philo->fork_right);
+			philo->forks[1] = 1;
 		}
 		else
 		{
 			pthread_mutex_lock(philo->fork_right);
-			hold_for_death(philo);
+			philo->forks[1] = 1;
+			if (*(philo->sim_death))
+				break;
 			printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 			pthread_mutex_lock(philo->fork_left);
+			philo->forks[0] = 1;
 		}
-		hold_for_death(philo);
+		if (*(philo->sim_death))
+			break;
 		printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
 		// extend deadline
 		if (philo->deadline < get_time(philo->start))
 		{
-			pthread_mutex_lock(philo->death_check);
 			philo->alive = 0;
 			break ;
 		}
@@ -180,17 +212,27 @@ void *philosophise(void *args)
 		philo->times_eaten += 1;
 		pthread_mutex_unlock(philo->fork_left);
 		pthread_mutex_unlock(philo->fork_right);
-
+		philo->forks[0] = 0;
+		philo->forks[1] = 0;
 		// i sleep.
-		hold_for_death(philo);
+		if (*(philo->sim_death))
+			break;
 		printf("%lu %d is sleeping\n", get_time(philo->start), philo->id);
 		usleep(philo->time_to_sleep * 1000);
 	
 		// i think.
-		hold_for_death(philo);
+		if (*(philo->sim_death))
+			break;
 		printf("%lu %d is thinking\n", get_time(philo->start), philo->id);
-		sleep_for(philo->time_to_eat - philo->time_to_sleep, philo->deadline - get_time(philo->start), 10);
+		sleep_for(philo->time_to_eat - philo->time_to_sleep,
+			positive_diff(philo->deadline, get_time(philo->start)),
+			10);
 	}
+	if (philo->forks[0])
+		pthread_mutex_unlock(philo->fork_left);
+	if (philo->forks[1])
+		pthread_mutex_unlock(philo->fork_right);
+	philo->thread_end = 1;
 	return NULL;
 }
 
@@ -198,10 +240,15 @@ int main(int argc, char **argv)
 {
 	struct sim_info info;
 	struct philosopher *philosophers;
-	int death;
 	uint64_t start;
+	int philo_died;
 
-	death = 0;
+// temp
+	int offender_id;
+
+	offender_id = -1;
+	info.death = 0;
+	philo_died = 0;
 	// printf("argc: %d\n", argc);
 	if (argc < 5 || argc > 6)
 		return argc_fail();
@@ -213,9 +260,8 @@ int main(int argc, char **argv)
 	int i = 0;
 	while (i < info.num)
 	{
-		philosophers[i].id = i + 1;
+		philosophers[i].thread_end = 0;
 		philosophers[i].start = start;
-		philosophers[i].deadline = info.time_to_die;
 		pthread_create(&(philosophers[i].thread), NULL, philosophise, &(philosophers[i]));
 		pthread_detach(philosophers[i].thread);
 		i++;
@@ -228,13 +274,14 @@ int main(int argc, char **argv)
 		{
 			if (!philosophers[i].alive || philosophers[i].deadline < get_time(philosophers[i].start))
 			{
-				printf("%lu %d died\n", get_time(start), philosophers[i].id);
-				death = 1;
+				offender_id = philosophers[i].id;
+				info.death = 1;
+				philo_died = 1;
 				break;
 			}
 			i++;
 		}
-		if (death)
+		if (info.death)
 			break;
 		if (info.minimum_eats > -1)
 		{
@@ -244,17 +291,29 @@ int main(int argc, char **argv)
 				if (philosophers[i].times_eaten < info.minimum_eats)
 					break ;
 				if (i == info.num - 1)
-					death = 1;
+					info.death = 1;
 				i++;
 			}
-			if (death)
+			if (info.death)
 				break;
 		}
 	}
 	// logic end
+
 	// cleanup
+	// wait for all the philo threads to end before proceeding
+	i = 0;
+	while (i < info.num)
+	{
+		if (philosophers[i].thread_end)
+			i++;
+
+	}
 	free(philosophers);
-	pthread_mutex_destroy(&(info.death_check));
 	// the freeing process needs to be more elaborate here
+	if (philo_died)
+	{
+		printf("%lu %d died\n", get_time(start), offender_id);
+	}
 	return (EXIT_SUCCESS);
 }

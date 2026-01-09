@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/09 00:53:30 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/09 03:01:43 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,20 +24,12 @@
 #define FUNC_SUCCESS 1
 #define FUNC_FAIL 0
 
-enum philostate
-{
-	DEAD = 0,
-	THINK,
-	EAT,
-	SLEEP
-};
-
 struct philosopher 
 {
 	pthread_t thread;
 	int id;
 	
-	int state;
+	int alive;
 	int time_in_state;
 	u_int64_t deadline;
 	int times_eaten;
@@ -77,7 +69,7 @@ static int argc_fail(void)
 }
 static void init_a_philo(struct philosopher *philo, struct sim_info *info, int i)
 {
-	philo->state = THINK;
+	philo->alive = 1;
 	philo->time_in_state = 0;
 	philo->times_eaten = 0;
 
@@ -134,8 +126,6 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 	return FUNC_SUCCESS;
 }
 
-// bufferUS is a constant buffer time in microseconds that is meant to give the program leeway time to act
-#define BUFFERUS 1
 
 void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage)
 {
@@ -144,12 +134,11 @@ void sleep_for(int sleepeatdiff, uint64_t timeleft, uint64_t percentage)
 		usleep((uint64_t)sleepeatdiff * 1000);
 		timeleft -= (uint64_t)sleepeatdiff;
 	}
-    usleep(timeleft * 10 * percentage - BUFFERUS);
+    usleep(timeleft * 10 * percentage);
 }
 
 void hold_for_death(struct philosopher *philo)
 {
-	// i check for death.
 	pthread_mutex_lock(philo->death_check);
 	pthread_mutex_unlock(philo->death_check);
 }
@@ -158,7 +147,6 @@ void *philosophise(void *args)
 {
 	struct philosopher *philo;
 	philo = (struct philosopher *)args;
-	philo->state = THINK;
 	usleep(philo->id % 2 * 50);
 	while (1)
 	{
@@ -179,11 +167,11 @@ void *philosophise(void *args)
 		hold_for_death(philo);
 		printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
-		philo->state = EAT;
 		// extend deadline
 		if (philo->deadline < get_time(philo->start))
 		{
-			philo->state = DEAD;
+			pthread_mutex_lock(philo->death_check);
+			philo->alive = 0;
 			break ;
 		}
 		else
@@ -196,13 +184,11 @@ void *philosophise(void *args)
 		// i sleep.
 		hold_for_death(philo);
 		printf("%lu %d is sleeping\n", get_time(philo->start), philo->id);
-		philo->state = SLEEP;
 		usleep(philo->time_to_sleep * 1000);
 	
 		// i think.
 		hold_for_death(philo);
 		printf("%lu %d is thinking\n", get_time(philo->start), philo->id);
-		philo->state = THINK;
 		sleep_for(philo->time_to_eat - philo->time_to_sleep, philo->deadline - get_time(philo->start), 10);
 	}
 	return NULL;
@@ -214,7 +200,6 @@ int main(int argc, char **argv)
 	struct philosopher *philosophers;
 	int death;
 	uint64_t start;
-
 
 	death = 0;
 	// printf("argc: %d\n", argc);
@@ -241,9 +226,8 @@ int main(int argc, char **argv)
 		i = 0;
 		while (i < info.num)
 		{
-			if (philosophers[i].state == DEAD || philosophers[i].deadline < get_time(philosophers[i].start))
+			if (!philosophers[i].alive || philosophers[i].deadline < get_time(philosophers[i].start))
 			{
-				pthread_mutex_lock(&(info.death_check));
 				printf("%lu %d died\n", get_time(start), philosophers[i].id);
 				death = 1;
 				break;

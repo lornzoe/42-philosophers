@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/10 07:46:00 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/11 23:06:05 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -152,6 +152,18 @@ uint64_t positive_diff(uint64_t left, uint64_t right)
 	return (left - right);
 }
 
+int death_check(struct philosopher *philo)
+{
+	if (*(philo->sim_death))
+		return 1;
+	if (philo->deadline < get_time(philo->start))
+	{
+		philo->alive = 0;
+		return 1;
+	}
+	return 0;
+}
+
 void *philosophise(void *args)
 {
 	struct philosopher *philo;
@@ -171,13 +183,13 @@ void *philosophise(void *args)
 	usleep(philo->id % 2 * 250);
 	while (1)
 	{
-		if (*(philo->sim_death))
+		if (death_check(philo))
 			break;
 		if (philo->id % 2)
 		{
 			pthread_mutex_lock(philo->fork_left);
 			philo->forks[0] = 1;
-			if (*(philo->sim_death))
+			if (death_check(philo))
 				break;
 			printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 			pthread_mutex_lock(philo->fork_right);
@@ -187,13 +199,13 @@ void *philosophise(void *args)
 		{
 			pthread_mutex_lock(philo->fork_right);
 			philo->forks[1] = 1;
-			if (*(philo->sim_death))
+			if (death_check(philo))
 				break;
 			printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 			pthread_mutex_lock(philo->fork_left);
 			philo->forks[0] = 1;
 		}
-		if (*(philo->sim_death))
+		if (death_check(philo))
 			break;
 		printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
@@ -212,13 +224,13 @@ void *philosophise(void *args)
 		philo->forks[0] = 0;
 		philo->forks[1] = 0;
 		// i sleep.
-		if (*(philo->sim_death))
+		if (death_check(philo))
 			break;
 		printf("%lu %d is sleeping\n", get_time(philo->start), philo->id);
 		usleep(philo->time_to_sleep * 1000);
 	
 		// i think.
-		if (*(philo->sim_death))
+		if (death_check(philo))
 			break;
 		printf("%lu %d is thinking\n", get_time(philo->start), philo->id);
 		sleep_for(philo->time_to_eat - philo->time_to_sleep,
@@ -294,6 +306,7 @@ int main(int argc, char **argv)
 			if (info.death)
 				break;
 		}
+		usleep(10 * info.num);
 	}
 	// logic end
 

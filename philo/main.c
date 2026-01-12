@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/12 20:37:42 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/12 21:23:47 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,7 @@ struct philosopher
 	pthread_mutex_t *deadline_lock;
 	pthread_mutex_t *eaten_lock;
 	pthread_mutex_t *simdeath_lock;
+	pthread_mutex_t *print_lock;
 
 	pthread_mutex_t *race_gate;
 	
@@ -63,6 +64,7 @@ struct sim_info
 	pthread_mutex_t *deadline_locks;
 	pthread_mutex_t *eaten_locks;
 	pthread_mutex_t *simdeath_lock;
+	pthread_mutex_t *print_lock;
 	pthread_mutex_t *race_gate;
 
 	int death;
@@ -99,6 +101,9 @@ static void init_a_philo(struct philosopher *philo, struct sim_info *info, int i
 	philo->eaten_lock = &(info->eaten_locks[i]);
 	philo->simdeath_lock = info->simdeath_lock;
 	philo->race_gate = info->race_gate;
+	philo->print_lock = info->print_lock;
+	
+	// misc info
 	philo->id = i + 1;
 	philo->deadline = info->time_to_die;
 	philo->sim_death = &(info->death);
@@ -119,12 +124,13 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 		info->minimum_eats = atoi(argv[5]);
 	else
 	 	info->minimum_eats = -1;
-	*philosophers = malloc(sizeof(struct philosopher) * (info->num + 1));
-	info->forks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
-	info->deadline_locks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
-	info->eaten_locks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
+	*philosophers = malloc(sizeof(struct philosopher) * (info->num ));
+	info->forks = malloc(sizeof(pthread_mutex_t) * (info->num));
+	info->deadline_locks = malloc(sizeof(pthread_mutex_t) * (info->num));
+	info->eaten_locks = malloc(sizeof(pthread_mutex_t) * (info->num));
 	info->simdeath_lock = malloc(sizeof(pthread_mutex_t));
 	info->race_gate = malloc(sizeof(pthread_mutex_t));
+	info->print_lock = malloc(sizeof(pthread_mutex_t));
 
 	if (!(*philosophers) || !info->forks || !info->deadline_locks || !info->eaten_locks || !info->simdeath_lock)
 		return FUNC_FAIL;
@@ -138,6 +144,7 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 	}
 	pthread_mutex_init(info->simdeath_lock, NULL);
 	pthread_mutex_init(info->race_gate, NULL);
+	pthread_mutex_init(info->print_lock, NULL);
 	i = 0;
 	while (i < info->num)
 	{
@@ -181,10 +188,31 @@ int intermittent_sleep(struct philosopher *philo, uint64_t time)
 	while (get_time(*philo->start) < wakeup)
 	{
 		usleep(500);
-		if (death_check(philo))
+		pthread_mutex_lock(philo->deadline_lock);
+		if (philo->deadline < get_time(*philo->start))
+		{
+			pthread_mutex_unlock(philo->deadline_lock);
 			return 1;
+		}
+		pthread_mutex_unlock(philo->deadline_lock);
 	}
 	return 0;
+}
+
+int log_alive_action(struct philosopher *philo, char *str)
+{
+	pthread_mutex_lock(philo->print_lock);
+	pthread_mutex_lock(philo->simdeath_lock);
+	if (*philo->sim_death)
+	{
+		pthread_mutex_unlock(philo->simdeath_lock);
+		pthread_mutex_unlock(philo->print_lock);
+		return FUNC_FAIL;
+	}	
+	printf("%lu %d %s\n", get_time(*philo->start), philo->id, str);
+	pthread_mutex_unlock(philo->simdeath_lock);
+	pthread_mutex_unlock(philo->print_lock);
+	return FUNC_SUCCESS;
 }
 
 void *philosophise(void *args)
@@ -197,7 +225,7 @@ void *philosophise(void *args)
 	if (philo->fork_left == philo->fork_right)
 	{
 		pthread_mutex_lock(philo->fork_left);
-		printf("%lu %d has taken a fork\n", get_time(*philo->start), philo->id);
+		log_alive_action(philo, "has taken a fork");
 		while (1)
 		{
 			if (death_check(philo))
@@ -216,9 +244,8 @@ void *philosophise(void *args)
 		{
 			pthread_mutex_lock(philo->fork_left);
 			philo->forks[0] = 1;
-			if (death_check(philo))
-				break;
-			printf("%lu %d has taken a fork\n", get_time(*philo->start), philo->id);
+			if (!log_alive_action(philo, "has taken a fork"))
+				break ;
 			pthread_mutex_lock(philo->fork_right);
 			philo->forks[1] = 1;
 		}
@@ -228,14 +255,15 @@ void *philosophise(void *args)
 			philo->forks[1] = 1;
 			if (death_check(philo))
 				break;
-			printf("%lu %d has taken a fork\n", get_time(*philo->start), philo->id);
+			if (!log_alive_action(philo, "has taken a fork"))
+				break ;
 			pthread_mutex_lock(philo->fork_left);
 			philo->forks[0] = 1;
 		}
-		if (death_check(philo))
-			break;
-		printf("%lu %d has taken a fork\n", get_time(*philo->start), philo->id);
-		printf("%lu %d is eating\n", get_time(*philo->start), philo->id);
+		if (!log_alive_action(philo, "has taken a fork"))
+			break ;
+		if (!log_alive_action(philo, "is eating"))
+			break ;
 		// extend deadline
 		if (death_check(philo))
 			break ;
@@ -256,15 +284,13 @@ void *philosophise(void *args)
 		philo->forks[0] = 0;
 		philo->forks[1] = 0;
 		// i sleep.
-		if (death_check(philo))
-			break;
-		printf("%lu %d is sleeping\n", get_time(*philo->start), philo->id);
+		if (!log_alive_action(philo, "is sleeping"))
+			break ;
 		if (intermittent_sleep(philo, philo->time_to_sleep))
-			break ;	
+			break ;
 		// i think.
-		if (death_check(philo))
-			break;
-		printf("%lu %d is thinking\n", get_time(*philo->start), philo->id);
+		if (!log_alive_action(philo, "is thinking"))
+			break ;
 		if ((philo->time_to_eat - philo->time_to_sleep) > 0)
 		{
 			if (intermittent_sleep(philo, philo->time_to_eat - philo->time_to_sleep))
@@ -283,14 +309,10 @@ int main(int argc, char **argv)
 	struct sim_info info;
 	struct philosopher *philosophers;
 	uint64_t start;
-	int philo_died;
 
 // temp
-	int offender_id;
 
-	offender_id = -1;
 	info.death = 0;
-	philo_died = 0;
 	start = 0;
 	// printf("argc: %d\n", argc);
 	if (argc < 5 || argc > 6)
@@ -318,11 +340,12 @@ int main(int argc, char **argv)
 		{
 			if (death_check(&(philosophers[i])))
 			{
-				offender_id = philosophers[i].id;
+				pthread_mutex_lock(info.print_lock);
 				pthread_mutex_lock(info.simdeath_lock);
 				info.death = 1;
+				printf("%lu %d died\n", get_time(start), philosophers[i].id);
 				pthread_mutex_unlock(info.simdeath_lock);
-				philo_died = 1;
+				pthread_mutex_unlock(info.print_lock);
 
 				break;
 			}
@@ -366,10 +389,6 @@ int main(int argc, char **argv)
 	{
 		pthread_join(philosophers[i].thread, NULL);
 		i++;
-	}
-	if (philo_died)
-	{
-		printf("%lu %d died\n", get_time(start), offender_id);
 	}
 	free(philosophers);
 	// the freeing process needs to be more elaborate here

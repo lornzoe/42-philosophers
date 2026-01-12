@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/01/11 23:06:05 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/01/12 18:00:27 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,10 @@ struct philosopher
 	pthread_mutex_t *fork_left;
 	pthread_mutex_t *fork_right;
 
+	pthread_mutex_t *alive_lock;
+	pthread_mutex_t *deadline_lock;
+	pthread_mutex_t *eaten_lock;
+
 	u_int64_t start;
 
 	int *sim_death;
@@ -55,6 +59,11 @@ struct sim_info
 	int time_to_sleep;
 	int minimum_eats;
 	pthread_mutex_t *forks;
+	
+	pthread_mutex_t *alive_locks;
+	pthread_mutex_t *deadline_locks;
+	pthread_mutex_t *eaten_locks;
+
 	int death;
 };
 
@@ -86,6 +95,11 @@ static void init_a_philo(struct philosopher *philo, struct sim_info *info, int i
 		philo->fork_right = &(info->forks[0]);
 	else
 	 	philo->fork_right = &(info->forks[i + 1]);
+
+	philo->alive_lock = &(info->alive_locks[i]);
+	philo->deadline_lock = &(info->deadline_locks[i]);
+	philo->eaten_lock = &(info->eaten_locks[i]);
+
 	philo->id = i + 1;
 	philo->deadline = info->time_to_die;
 	philo->sim_death = &(info->death);
@@ -108,12 +122,19 @@ static int init_setup(struct sim_info *info, struct philosopher **philosophers, 
 	 	info->minimum_eats = -1;
 	*philosophers = malloc(sizeof(struct philosopher) * (info->num + 1));
 	info->forks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
+	info->alive_locks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
+	info->deadline_locks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
+	info->eaten_locks = malloc(sizeof(pthread_mutex_t) * (info->num + 1));
+
 	if (!(*philosophers) || !info->forks)
 		return FUNC_FAIL;
 	i = 0;
 	while (i < info->num)
 	{
 		pthread_mutex_init(&(info->forks[i]), NULL);
+		pthread_mutex_init(&(info->alive_locks[i]), NULL);
+		pthread_mutex_init(&(info->deadline_locks[i]), NULL);
+		pthread_mutex_init(&(info->eaten_locks[i]), NULL);
 		i++;
 	}
 	i = 0;
@@ -156,11 +177,15 @@ int death_check(struct philosopher *philo)
 {
 	if (*(philo->sim_death))
 		return 1;
+	pthread_mutex_lock(philo->deadline_lock);
 	if (philo->deadline < get_time(philo->start))
 	{
+		pthread_mutex_lock(philo->alive_lock);
 		philo->alive = 0;
+		pthread_mutex_unlock(philo->alive_lock);
 		return 1;
 	}
+	pthread_mutex_unlock(philo->deadline_lock);
 	return 0;
 }
 
@@ -210,15 +235,20 @@ void *philosophise(void *args)
 		printf("%lu %d has taken a fork\n", get_time(philo->start), philo->id);
 		printf("%lu %d is eating\n", get_time(philo->start), philo->id);
 		// extend deadline
-		if (philo->deadline < get_time(philo->start))
-		{
-			philo->alive = 0;
+		if (death_check(philo))
 			break ;
-		}
 		else
+		{
+			pthread_mutex_lock(philo->deadline_lock);
 			philo->deadline = get_time(philo->start) + philo->time_to_die;
+			pthread_mutex_unlock(philo->deadline_lock);
+		}
 		usleep(philo->time_to_eat * 1000);
+		
+		pthread_mutex_lock(philo->eaten_lock);
 		philo->times_eaten += 1;
+		pthread_mutex_unlock(philo->eaten_lock);
+
 		pthread_mutex_unlock(philo->fork_left);
 		pthread_mutex_unlock(philo->fork_right);
 		philo->forks[0] = 0;
@@ -281,13 +311,20 @@ int main(int argc, char **argv)
 		i = 0;
 		while (i < info.num)
 		{
+			pthread_mutex_lock(philosophers[i].alive_lock);
+			pthread_mutex_lock(philosophers[i].deadline_lock);
 			if (!philosophers[i].alive || philosophers[i].deadline < get_time(philosophers[i].start))
 			{
 				offender_id = philosophers[i].id;
 				info.death = 1;
 				philo_died = 1;
+				pthread_mutex_unlock(philosophers[i].deadline_lock);
+				pthread_mutex_unlock(philosophers[i].alive_lock);
+
 				break;
 			}
+			pthread_mutex_unlock(philosophers[i].deadline_lock);
+			pthread_mutex_unlock(philosophers[i].alive_lock);
 			i++;
 		}
 		if (info.death)
@@ -297,10 +334,15 @@ int main(int argc, char **argv)
 			i = 0;
 			while (i < info.num)
 			{
+				pthread_mutex_lock(philosophers[i].eaten_lock);
 				if (philosophers[i].times_eaten < info.minimum_eats)
+				{
+					pthread_mutex_unlock(philosophers[i].eaten_lock);
 					break ;
+				}
 				if (i == info.num - 1)
 					info.death = 1;
+				pthread_mutex_unlock(philosophers[i].eaten_lock);
 				i++;
 			}
 			if (info.death)

@@ -6,18 +6,11 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 15:38:37 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 15:55:24 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
-
-uint64_t get_time(uint64_t start)
-{
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return ((uint64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000) - start);
-}
 
 static int argc_fail(void)
 {

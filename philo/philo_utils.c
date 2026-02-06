@@ -6,12 +6,19 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/06 12:18:30 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 15:36:49 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 15:55:10 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
 #include <stdio.h>
+
+uint64_t get_time(uint64_t start)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return ((uint64_t)tv.tv_sec * 1000 + (tv.tv_usec / 1000) - start);
+}
 
 int intermittent_sleep(t_philosopher *philo, uint64_t time)
 {

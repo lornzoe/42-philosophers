@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/06 12:14:57 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 15:36:55 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 17:40:44 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,7 @@
 # include <unistd.h> // write, usleep
 # include <sys/time.h> // gettimeofday
 # include <pthread.h> // pthread funcs (3) + pthread_mutex funcs (4)
+# include <limits.h>
 
 # define FUNC_SUCCESS 1
 # define FUNC_FAIL 0
@@ -69,9 +70,9 @@ struct s_sim
 	int death;
 } typedef t_sim;
 
+int			ft_isdigit(int c);
+int			ft_atol(const char *nptr);
 int			init_setup(struct s_sim *info, struct s_philosopher **philosophers, int argc, char **argv);
-
-uint64_t	get_time(uint64_t start);
 
 void 		monitoring(struct s_sim *info, struct s_philosopher *philosophers, uint64_t start);
 
@@ -80,6 +81,7 @@ int 		philo_eat(struct s_philosopher *philo);
 int			philo_sleep(struct s_philosopher *philo);
 int 		philo_think(struct s_philosopher *philo);
 
+uint64_t	get_time(uint64_t start);
 int 		death_check(struct s_philosopher *philo);
 int 		log_alive_action(struct s_philosopher *philo, char *str);
 int			intermittent_sleep(struct s_philosopher *philo, uint64_t time);

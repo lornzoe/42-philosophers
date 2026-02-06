@@ -6,11 +6,23 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/06 12:21:20 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 15:46:18 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 17:46:17 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
+
+static size_t	ft_strlen(const char *s)
+{
+	size_t	i;
+
+	if (*s == '\0')
+		return (0);
+	i = 0;
+	while (s[i] != 0)
+		i++;
+	return (i);
+}
 
 static void init_a_philo(t_philosopher *philo, t_sim *info, int i)
 {
@@ -36,29 +48,68 @@ static void init_a_philo(t_philosopher *philo, t_sim *info, int i)
 	philo->forks[1] = 0;
 }
 
-static void init_info(t_sim *info, int argc, char **argv)
+static int validate_args(t_sim *info, int argc, char **argv)
 {
-	info->num = atoi(argv[1]);
-	info->time_to_die = atoi(argv[2]);
-	info->time_to_eat = atoi(argv[3]);
-	info->time_to_sleep = atoi(argv[4]);
+	int i;
+
+	i = 1;
+	while (i < argc)
+	{
+		if (ft_strlen(argv[i]) > 10)
+			return FUNC_FAIL;
+		while (*(argv[i]) != '\0')
+		{
+			if (!ft_isdigit(*(argv[i])))
+				return FUNC_FAIL;
+			(argv[i])++;
+		}
+		i++;
+	}
+	if (info->num <= 0 || info->time_to_die <= 0 || info->time_to_eat <= 0 || info->time_to_sleep <= 0)
+		return FUNC_FAIL;
+	if (argc == 6 && info->minimum_eats <= 0)
+		return FUNC_FAIL;
+	return FUNC_SUCCESS;
+}
+
+static int init_info(t_sim *info, int argc, char **argv)
+{
+	info->forks = NULL;
+	info->deadline_locks = NULL;
+	info->eaten_locks = NULL;
+	info->simdeath_lock = NULL;
+	info->print_lock = NULL;
+	info->race_gate = NULL;
+	info->num = ft_atol(argv[1]);
+	info->time_to_die = ft_atol(argv[2]);
+	info->time_to_eat = ft_atol(argv[3]);
+	info->time_to_sleep = ft_atol(argv[4]);
 	if (argc == 6)
-		info->minimum_eats = atoi(argv[5]);
+		info->minimum_eats = ft_atol(argv[5]);
 	else
 		info->minimum_eats = -1;
+	if (!validate_args(info, argc, argv))
+	{
+		printf("failed here");
+		return FUNC_FAIL;
+	}
+		
 	info->forks = malloc(sizeof(pthread_mutex_t) * (info->num));
 	info->deadline_locks = malloc(sizeof(pthread_mutex_t) * (info->num));
 	info->eaten_locks = malloc(sizeof(pthread_mutex_t) * (info->num));
 	info->simdeath_lock = malloc(sizeof(pthread_mutex_t));
-	info->race_gate = malloc(sizeof(pthread_mutex_t));
 	info->print_lock = malloc(sizeof(pthread_mutex_t));
+	info->race_gate = malloc(sizeof(pthread_mutex_t));
+	if (!info->forks || !info->deadline_locks || !info->eaten_locks || !info->simdeath_lock || !info->print_lock || !info->race_gate)
+		return FUNC_FAIL;
+	return FUNC_SUCCESS;
 }
 
 int init_setup(t_sim *info, t_philosopher **philosophers, int argc, char **argv)
 {
 	int i;
-
-	init_info(info, argc, argv);
+	if (!init_info(info, argc, argv))
+		return FUNC_FAIL;
 	*philosophers = malloc(sizeof(t_philosopher) * (info->num ));
 	if (!(*philosophers) || !info->forks || !info->deadline_locks || !info->eaten_locks || !info->simdeath_lock)
 		return FUNC_FAIL;

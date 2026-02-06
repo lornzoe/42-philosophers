@@ -6,7 +6,7 @@
 #    By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/12/21 01:58:47 by lyanga            #+#    #+#              #
-#    Updated: 2026/02/06 16:06:55 by lyanga           ###   ########.fr        #
+#    Updated: 2026/02/06 17:41:04 by lyanga           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -17,7 +17,7 @@ CFLAGS = -g -Wall -Wextra -Werror -pthread
 RM = rm -f
 
 HEADERDIR = .
-SRCS = main.c init.c philosophising.c philo_actions.c philo_utils.c monitoring.c
+SRCS = main.c init.c philosophising.c philo_actions.c philo_utils.c monitoring.c ft_atol.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean fclean re

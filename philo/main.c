@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 16:26:15 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 17:38:39 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,27 +44,44 @@ static void start_sim(t_sim *info, t_philosopher *philosophers)
 	}
 }
 
-static void cleanup_sim(t_sim *info)
+static void cleanup_mutexs(t_sim *info)
 {
 	int i;
 	
 	i = 0;
 	while (i < info->num)
 	{
-		pthread_mutex_destroy(&(info->forks[i]));
-		pthread_mutex_destroy(&(info->deadline_locks[i]));
-		pthread_mutex_destroy(&(info->eaten_locks[i]));
+		if (info->forks)
+			pthread_mutex_destroy(&(info->forks[i]));
+		if (info->deadline_locks)
+			pthread_mutex_destroy(&(info->deadline_locks[i]));
+		if (info->eaten_locks)
+			pthread_mutex_destroy(&(info->eaten_locks[i]));
 		i++;
 	}
-	pthread_mutex_destroy(info->simdeath_lock);
-	pthread_mutex_destroy(info->print_lock);
-	pthread_mutex_destroy(info->race_gate);
-	free(info->forks);
-	free(info->deadline_locks);
-	free(info->eaten_locks);
-	free(info->simdeath_lock);
-	free(info->print_lock);
-	free(info->race_gate);
+	if (info->simdeath_lock)
+		pthread_mutex_destroy(info->simdeath_lock);
+	if (info->print_lock)
+		pthread_mutex_destroy(info->print_lock);
+	if (info->race_gate)
+		pthread_mutex_destroy(info->race_gate);
+}
+
+static void cleanup_sim(t_sim *info)
+{
+	cleanup_mutexs(info);
+	if (!info->forks)
+		free(info->forks);
+	if (!info->deadline_locks)
+		free(info->deadline_locks);
+	if (!info->eaten_locks)
+		free(info->eaten_locks);
+	if (!info->simdeath_lock)
+		free(info->simdeath_lock);
+	if (!info->print_lock)
+		free(info->print_lock);
+	if (!info->race_gate)
+		free(info->race_gate);
 }
 
 int main(int argc, char **argv)
@@ -74,8 +91,14 @@ int main(int argc, char **argv)
 
 	if (argc < 5 || argc > 6)
 		return argc_fail();
+	philosophers = NULL;
 	if (!init_setup(&info, &philosophers, argc, argv))
+	{
+		cleanup_sim(&info);
+		if (philosophers)
+			free(philosophers);
 		return (EXIT_FAILURE);
+	}
 	start_sim(&info, philosophers);
 	cleanup_sim(&info);
 	free(philosophers);

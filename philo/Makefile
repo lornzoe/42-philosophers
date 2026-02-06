@@ -6,14 +6,14 @@
 #    By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/12/21 01:58:47 by lyanga            #+#    #+#              #
-#    Updated: 2026/02/06 15:39:15 by lyanga           ###   ########.fr        #
+#    Updated: 2026/02/06 16:06:55 by lyanga           ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME = philo
 
 CC = cc
-CFLAGS = -g -Wall -Wextra -Werror -pthread -fsanitize=thread
+CFLAGS = -g -Wall -Wextra -Werror -pthread
 RM = rm -f
 
 HEADERDIR = .

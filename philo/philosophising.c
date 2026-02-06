@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/06 12:27:45 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 15:36:49 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 18:01:27 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,7 +34,7 @@ void *philosophise(void *args)
 	pthread_mutex_unlock(philo->race_gate);
 	if (philo->fork_left == philo->fork_right) // 1 philo case
 		return (philo_alone(philo));
-	usleep(philo->id % 2 * 50);
+	usleep(philo->id % 2 * 100);
 	while (1)
 	{
 		if (death_check(philo))

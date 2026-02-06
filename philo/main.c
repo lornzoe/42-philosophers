@@ -6,22 +6,24 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 17:38:39 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 20:26:04 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo.h"
 
-static int argc_fail(void)
+static int	argc_fail(void)
 {
-	printf("usage: number_of_philosophers time_to_die time_to_eat time_to_sleep [number_of_times_each_philosopher_must_eat]\n");
-	return EXIT_FAILURE;
+	printf("usage: number_of_philosophers \
+time_to_die time_to_eat time_to_sleep \
+[number_of_times_each_philosopher_must_eat]\n");	
+	return (EXIT_FAILURE);
 }
 
-static void start_sim(t_sim *info, t_philosopher *philosophers)
+static void	start_sim(t_sim *info, t_philosopher *philosophers)
 {
-	uint64_t start;
-	int i;
+	uint64_t	start;
+	int			i;
 
 	i = 0;
 	start = 0;
@@ -30,7 +32,8 @@ static void start_sim(t_sim *info, t_philosopher *philosophers)
 	while (i < info->num)
 	{
 		philosophers[i].start = &start;
-		pthread_create(&(philosophers[i].thread), NULL, philosophise, &(philosophers[i]));
+		pthread_create(&(philosophers[i].thread),
+			NULL, philosophise, &(philosophers[i]));
 		i++;
 	}
 	start = get_time(0);
@@ -44,10 +47,10 @@ static void start_sim(t_sim *info, t_philosopher *philosophers)
 	}
 }
 
-static void cleanup_mutexs(t_sim *info)
+static void	cleanup_mutexs(t_sim *info)
 {
-	int i;
-	
+	int	i;
+
 	i = 0;
 	while (i < info->num)
 	{
@@ -67,34 +70,35 @@ static void cleanup_mutexs(t_sim *info)
 		pthread_mutex_destroy(info->race_gate);
 }
 
-static void cleanup_sim(t_sim *info)
+static void	cleanup_sim(t_sim *info)
 {
 	cleanup_mutexs(info);
-	if (!info->forks)
+	if (info->forks)
 		free(info->forks);
-	if (!info->deadline_locks)
+	if (info->deadline_locks)
 		free(info->deadline_locks);
-	if (!info->eaten_locks)
+	if (info->eaten_locks)
 		free(info->eaten_locks);
-	if (!info->simdeath_lock)
+	if (info->simdeath_lock)
 		free(info->simdeath_lock);
-	if (!info->print_lock)
+	if (info->print_lock)
 		free(info->print_lock);
-	if (!info->race_gate)
+	if (info->race_gate)
 		free(info->race_gate);
 }
 
-int main(int argc, char **argv)
+int	main(int argc, char **argv)
 {
-	t_sim info;
-	t_philosopher *philosophers;
+	t_sim			info;
+	t_philosopher	*philosophers;
 
 	if (argc < 5 || argc > 6)
-		return argc_fail();
+		return (argc_fail());
 	philosophers = NULL;
 	if (!init_setup(&info, &philosophers, argc, argv))
 	{
-		cleanup_sim(&info);
+		if (validate_args(&info, argc, argv))
+			cleanup_sim(&info);
 		if (philosophers)
 			free(philosophers);
 		return (EXIT_FAILURE);

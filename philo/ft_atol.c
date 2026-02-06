@@ -6,9 +6,11 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/06 16:48:53 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 17:32:18 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/06 20:31:17 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+#include "philo.h"
 
 int	ft_isdigit(int c)
 {
@@ -55,5 +57,7 @@ int	ft_atol(const char *nptr)
 		result += (*s - '0');
 		s++;
 	}
+	if (result > INT_MAX)
+		result = 0;
 	return (result *= sign);
 }

@@ -6,7 +6,7 @@
 /*   By: lyanga <lyanga@student.42singapore.sg>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/21 01:59:17 by lyanga            #+#    #+#             */
-/*   Updated: 2026/02/06 20:26:04 by lyanga           ###   ########.fr       */
+/*   Updated: 2026/02/09 16:09:30 by lyanga           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ static int	argc_fail(void)
 {
 	printf("usage: number_of_philosophers \
 time_to_die time_to_eat time_to_sleep \
-[number_of_times_each_philosopher_must_eat]\n");	
+[number_of_times_each_philosopher_must_eat]\n");
 	return (EXIT_FAILURE);
 }
 

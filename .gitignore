@@ -1,5 +1,6 @@
 philo/42-philo*
 philo/philo
+philo_bonus/philo_bonus
 .vscode/
 */*.out
 *.out

@@ -4,3 +4,4 @@ philo/philo
 */*.out
 *.out
 */*.o
+*.pdf

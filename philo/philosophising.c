@@ -20,7 +20,7 @@ static void	*philo_alone(t_philosopher *philo)
 	{
 		if (death_check(philo))
 			break ;
-		continue ;
+		usleep(500);
 	}
 	pthread_mutex_unlock(philo->fork_left);
 	return (NULL);
@@ -31,8 +31,6 @@ void	*philosophise(void *args)
 	t_philosopher	*philo;
 
 	philo = (t_philosopher *)args;
-	pthread_mutex_lock(philo->race_gate);
-	pthread_mutex_unlock(philo->race_gate);
 	if (philo->fork_left == philo->fork_right)
 		return (philo_alone(philo));
 	if (!(philo->id % 2))

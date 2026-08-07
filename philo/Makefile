@@ -27,7 +27,7 @@ all: $(NAME)
 $(NAME): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
-%.o: %.c
+%.o: %.c philo.h
 	$(CC) $(CFLAGS) -I${HEADERDIR} -c $< -o $@
 
 clean:

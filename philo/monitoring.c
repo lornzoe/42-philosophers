@@ -23,10 +23,8 @@ static int	monitor_death(t_sim *info, t_philosopher *philosophers,
 		if (death_check(&(philosophers[i])))
 		{
 			pthread_mutex_lock(info->print_lock);
-			pthread_mutex_lock(info->simdeath_lock);
 			info->death = 1;
 			printf("%lu %d died\n", get_time(start), philosophers[i].id);
-			pthread_mutex_unlock(info->simdeath_lock);
 			pthread_mutex_unlock(info->print_lock);
 			return (FUNC_SUCCESS);
 		}
@@ -44,18 +42,11 @@ static int	monitor_eats(t_sim *info, t_philosopher *philosophers)
 	i = 0;
 	while (i < info->num)
 	{
-		pthread_mutex_lock(philosophers[i].eaten_lock);
 		if (philosophers[i].times_eaten < info->minimum_eats)
-		{
-			pthread_mutex_unlock(philosophers[i].eaten_lock);
 			return (FUNC_FAIL);
-		}
-		pthread_mutex_unlock(philosophers[i].eaten_lock);
 		i++;
 	}
-	pthread_mutex_lock(info->simdeath_lock);
 	info->death = 1;
-	pthread_mutex_unlock(info->simdeath_lock);
 	return (FUNC_SUCCESS);
 }
 

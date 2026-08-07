@@ -25,25 +25,24 @@
 # define FUNC_SUCCESS 1
 # define FUNC_FAIL 0
 
+typedef _Atomic int			t_aint;
+typedef _Atomic uint64_t	t_au64;
+
 typedef struct s_philosopher
 {
 	pthread_t		thread;
 	int				id;
-	u_int64_t		deadline;
-	int				times_eaten;	
+	t_au64			deadline;
+	t_aint			times_eaten;
 	int				time_to_die;
 	int				time_to_eat;
 	int				time_to_sleep;
 	int				forks[2];
 	pthread_mutex_t	*fork_left;
 	pthread_mutex_t	*fork_right;
-	pthread_mutex_t	*deadline_lock;
-	pthread_mutex_t	*eaten_lock;
-	pthread_mutex_t	*simdeath_lock;
 	pthread_mutex_t	*print_lock;
-	pthread_mutex_t	*race_gate;
-	u_int64_t		*start;
-	int				*sim_death;
+	uint64_t		start;
+	t_aint			*sim_death;
 }	t_philosopher;
 
 typedef struct s_sim
@@ -53,13 +52,10 @@ typedef struct s_sim
 	int				time_to_eat;
 	int				time_to_sleep;
 	int				minimum_eats;
+	uint64_t		start;
 	pthread_mutex_t	*forks;
-	pthread_mutex_t	*deadline_locks;
-	pthread_mutex_t	*eaten_locks;
-	pthread_mutex_t	*simdeath_lock;
 	pthread_mutex_t	*print_lock;
-	pthread_mutex_t	*race_gate;
-	int				death;
+	t_aint			death;
 }	t_sim;
 
 int			ft_isdigit(int c);

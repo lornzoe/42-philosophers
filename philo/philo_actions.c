@@ -49,16 +49,10 @@ int	philo_eat(t_philosopher *philo)
 	if (death_check(philo))
 		return (FUNC_FAIL);
 	else
-	{
-		pthread_mutex_lock(philo->deadline_lock);
-		philo->deadline = get_time(*philo->start) + philo->time_to_die;
-		pthread_mutex_unlock(philo->deadline_lock);
-	}
+		philo->deadline = get_time(philo->start) + philo->time_to_die;
 	if (!intermittent_sleep(philo, philo->time_to_eat))
 		return (FUNC_FAIL);
-	pthread_mutex_lock(philo->eaten_lock);
 	philo->times_eaten += 1;
-	pthread_mutex_unlock(philo->eaten_lock);
 	pthread_mutex_unlock(philo->fork_left);
 	pthread_mutex_unlock(philo->fork_right);
 	philo->forks[0] = 0;
@@ -87,9 +81,9 @@ int	philo_think(t_philosopher *philo)
 				philo->time_to_eat - philo->time_to_sleep))
 			return (FUNC_FAIL);
 	}
-	if (get_time(*(philo->start) < philo->deadline))
+	if (get_time(philo->start) < philo->deadline)
 	{
-		diff = philo->deadline - get_time(*(philo->start));
+		diff = philo->deadline - get_time(philo->start);
 		diff /= 10;
 		if (diff > 0)
 		{

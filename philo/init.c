@@ -35,13 +35,10 @@ static void	init_a_philo(t_philosopher *philo, t_sim *info, int i)
 		philo->fork_right = &(info->forks[0]);
 	else
 		philo->fork_right = &(info->forks[i + 1]);
-	philo->deadline_lock = &(info->deadline_locks[i]);
-	philo->eaten_lock = &(info->eaten_locks[i]);
-	philo->simdeath_lock = info->simdeath_lock;
-	philo->race_gate = info->race_gate;
 	philo->print_lock = info->print_lock;
 	philo->id = i + 1;
 	philo->deadline = info->time_to_die;
+	philo->start = 0;
 	philo->sim_death = &(info->death);
 	philo->forks[0] = 0;
 	philo->forks[1] = 0;
@@ -77,11 +74,9 @@ int	validate_args(t_sim *info, int argc, char **argv)
 static int	init_info(t_sim *info, int argc, char **argv)
 {
 	info->forks = NULL;
-	info->deadline_locks = NULL;
-	info->eaten_locks = NULL;
-	info->simdeath_lock = NULL;
 	info->print_lock = NULL;
-	info->race_gate = NULL;
+	info->start = 0;
+	info->minimum_eats = -1;
 	info->num = ft_atol(argv[1]);
 	info->time_to_die = ft_atol(argv[2]);
 	info->time_to_eat = ft_atol(argv[3]);
@@ -91,13 +86,8 @@ static int	init_info(t_sim *info, int argc, char **argv)
 	if (!validate_args(info, argc, argv))
 		return (FUNC_FAIL);
 	info->forks = malloc(sizeof(pthread_mutex_t) * (info->num));
-	info->deadline_locks = malloc(sizeof(pthread_mutex_t) * (info->num));
-	info->eaten_locks = malloc(sizeof(pthread_mutex_t) * (info->num));
-	info->simdeath_lock = malloc(sizeof(pthread_mutex_t));
 	info->print_lock = malloc(sizeof(pthread_mutex_t));
-	info->race_gate = malloc(sizeof(pthread_mutex_t));
-	if (!info->forks || !info->deadline_locks || !info->eaten_locks
-		|| !info->simdeath_lock || !info->print_lock || !info->race_gate)
+	if (!info->forks || !info->print_lock)
 		return (FUNC_FAIL);
 	return (FUNC_SUCCESS);
 }
@@ -115,12 +105,8 @@ int	init_setup(t_sim *info, t_philosopher **philosophers, int argc, char **argv)
 	while (i < info->num)
 	{
 		pthread_mutex_init(&(info->forks[i]), NULL);
-		pthread_mutex_init(&(info->deadline_locks[i]), NULL);
-		pthread_mutex_init(&(info->eaten_locks[i]), NULL);
 		i++;
 	}
-	pthread_mutex_init(info->simdeath_lock, NULL);
-	pthread_mutex_init(info->race_gate, NULL);
 	pthread_mutex_init(info->print_lock, NULL);
 	i = 0;
 	while (i < info->num)
